@@ -1,13 +1,30 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json()); //cause will be sending some jsond data;
+app.use(express.json());
 
-const otpStore: Record<string, string> = {}; //storing in memory
+const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 3,
+    message: 'Too many requests, please try again after 5 minutes',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
-app.post('/generate-otp', (req, res) => {
+const passwordResetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password reset attempts, please try again after 15 minutes',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const otpStore: Record<string, string> = {};
+
+app.post('/generate-otp', otpLimiter, (req, res) => {
     const email = req.body.email;
     if (!email) {
         return res.status(400).json({ message: "Email is required" });
@@ -19,13 +36,13 @@ app.post('/generate-otp', (req, res) => {
     res.status(200).json({ message: "OTP generated and logged" });
 });
 
-
-app.post('/reset-password', (req, res) => {
+app.post('/reset-password', passwordResetLimiter, (req, res) => {
     const { email, otp, newPassword } = req.body;
+
     if (!email || !otp || !newPassword) {
         return res.status(400).json({ message: "Email, OTP, and new password are required" });
     }
-    if (otpStore[email] === otp) {
+    if (Number(otpStore[email]) === Number(otp)) {
         console.log(`Password for ${email} has been reset to: ${newPassword}`);
         delete otpStore[email];
         res.status(200).json({ message: "Password has been reset successfully" });
